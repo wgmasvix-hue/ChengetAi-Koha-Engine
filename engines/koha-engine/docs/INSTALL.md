@@ -11,7 +11,7 @@ During deployment the plugin copies the bundled engine into `deployments/<name>/
 
 Ports:
 - `UI_PORT` → Koha OPAC
-- `REST_PORT` → Koha staff interface
+- `STAFF_PORT` → Koha staff interface (`REST_PORT` is still accepted for compatibility with the main CLI profile format)
 
 The engine can also be operated directly for local iteration:
 

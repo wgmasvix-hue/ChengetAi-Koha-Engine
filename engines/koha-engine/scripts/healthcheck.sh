@@ -44,7 +44,9 @@ wait_for_url() {
 }
 
 if [ "$WAIT" = "1" ]; then
-    wait_for_url "OPAC" "http://localhost:${UI_PORT}" || wait_for_url "Staff interface" "http://localhost:${REST_PORT}"
+    wait_for_url "OPAC" "http://localhost:${UI_PORT}"
+    wait_for_url "Staff interface" "http://localhost:${STAFF_PORT:-$REST_PORT}"
 else
-    check_url "OPAC" "http://localhost:${UI_PORT}" || check_url "Staff interface" "http://localhost:${REST_PORT}"
+    check_url "OPAC" "http://localhost:${UI_PORT}"
+    check_url "Staff interface" "http://localhost:${STAFF_PORT:-$REST_PORT}"
 fi

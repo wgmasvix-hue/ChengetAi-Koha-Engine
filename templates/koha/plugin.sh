@@ -19,7 +19,7 @@ ui_port() {
 }
 
 staff_port() {
-    echo "${REST_PORT:-8080}"
+    echo "${STAFF_PORT:-${REST_PORT:-8080}}"
 }
 
 require_engine() {
@@ -86,6 +86,7 @@ configure_engine() {
     DEPLOY_NAME="$DEPLOY_NAME" \
     UI_PORT="$(ui_port)" \
     REST_PORT="$(staff_port)" \
+    STAFF_PORT="$(staff_port)" \
     INSTITUTION="$INSTITUTION" \
     REPOSITORY="$REPOSITORY" \
     ADMIN_EMAIL="$ADMIN_EMAIL" \

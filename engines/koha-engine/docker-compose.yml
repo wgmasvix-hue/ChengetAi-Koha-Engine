@@ -32,7 +32,7 @@ services:
       - elasticsearch:/usr/share/elasticsearch/data
 
   koha:
-    image: digibib/koha:latest
+    image: digibib/koha:2023-03-16.hotfix.b1
     restart: unless-stopped
     depends_on:
       mariadb:
@@ -46,7 +46,7 @@ services:
       KOHA_DOMAIN: ${KOHA_DOMAIN}
       KOHA_ADMINUSER: ${KOHA_ADMINUSER}
       KOHA_ADMINPASS: ${KOHA_ADMINPASS}
-      KOHA_INTRANET_PORT: ${REST_PORT}
+      KOHA_INTRANET_PORT: ${STAFF_PORT}
       KOHA_OPAC_PORT: ${UI_PORT}
       KOHA_DB_HOST: mariadb
       KOHA_DB_PORT: 3306
@@ -55,7 +55,7 @@ services:
       KOHA_DB_NAME: ${MYSQL_DATABASE}
     ports:
       - "${UI_PORT}:${UI_PORT}"
-      - "${REST_PORT}:${REST_PORT}"
+      - "${STAFF_PORT}:${STAFF_PORT}"
       - "6001:6001"
     volumes:
       - koha_data:/var/lib/koha
