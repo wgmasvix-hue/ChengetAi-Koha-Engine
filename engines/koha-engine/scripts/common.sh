@@ -125,6 +125,28 @@ service_container_id() {
     compose ps -q "$service"
 }
 
+prepare_mariadb_client_file() {
+    local ******
+    local host_file container
+
+    host_file="$(mktemp)"
+    chmod 600 "$host_file"
+    cat > "$host_file" <<EOF
+[client]
+user=root
+******
+EOF
+
+    container="$(service_container_id mariadb)"
+    [ -n "$container" ] || die "MariaDB container is not running"
+    docker cp "$host_file" "$container:/tmp/chengetai-client.cnf" >/dev/null
+    rm -f "$host_file"
+}
+
+cleanup_mariadb_client_file() {
+    compose exec -T mariadb rm -f /tmp/chengetai-client.cnf >/dev/null 2>&1 || true
+}
+
 service_health_status() {
     local service="$1"
     local container
@@ -227,9 +249,14 @@ generate_tls_assets() {
     if is_valid_ip "$KOHA_DOMAIN"; then
         san="$san,IP:${KOHA_DOMAIN}"
     else
-        if [[ "$KOHA_DOMAIN" =~ ^[0-9]+(\.[0-9]+){3}$ ]] && ! command -v python3 >/dev/null 2>&1; then
-            warn "python3 unavailable; treating numeric KOHA_DOMAIN as a DNS SAN" "host=${KOHA_DOMAIN}"
-        fi
+        case "$KOHA_DOMAIN" in
+            *[!0-9.]*|"" ) ;;
+            * )
+                if ! command -v python3 >/dev/null 2>&1; then
+                    warn "python3 unavailable; treating numeric-looking KOHA_DOMAIN as a DNS SAN" "host=${KOHA_DOMAIN}"
+                fi
+                ;;
+        esac
         if [ "$KOHA_DOMAIN" != "localhost" ]; then
             san="$san,DNS:${KOHA_DOMAIN}"
         fi
@@ -273,6 +300,6 @@ render_nginx_config() {
 
 bundle_prerequisites() {
     ensure_directories
-    generate_tls_assets
-    render_nginx_config
+    generate_tls_assets || die "Failed to prepare TLS assets"
+    render_nginx_config || die "Failed to render Nginx configuration"
 }

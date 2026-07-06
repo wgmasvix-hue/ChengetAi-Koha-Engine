@@ -13,7 +13,11 @@ load_env
 mkdir -p "$DEST"
 
 info "Backing up MariaDB"
-compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb mariadb-dump -u root "$MYSQL_DATABASE" | gzip > "$DEST/koha-db.sql.gz"
+prepare_mariadb_client_file "$MYSQL_ROOT_PASSWORD"
+trap cleanup_mariadb_client_file EXIT
+compose exec -T mariadb mariadb-dump --defaults-extra-file=/tmp/chengetai-client.cnf "$MYSQL_DATABASE" | gzip > "$DEST/koha-db.sql.gz"
+cleanup_mariadb_client_file
+trap - EXIT
 
 info "Archiving Koha state"
 compose exec -T koha tar czf - /etc/koha /var/lib/koha /var/log/koha > "$DEST/koha-files.tar.gz"

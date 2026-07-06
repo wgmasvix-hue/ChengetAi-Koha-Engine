@@ -11,7 +11,7 @@ server {
     ssl_certificate __TLS_CERT__;
     ssl_certificate_key __TLS_KEY__;
     ssl_session_timeout 1d;
-    # Shared cache keeps TLS session reuse consistent across OPAC and staff listeners.
+    # Shared cache lets Nginx worker processes reuse TLS sessions from the same named cache.
     ssl_session_cache shared:chengetai_koha_ssl:10m;
     ssl_protocols TLSv1.2 TLSv1.3;
 
@@ -37,7 +37,7 @@ server {
     ssl_certificate __TLS_CERT__;
     ssl_certificate_key __TLS_KEY__;
     ssl_session_timeout 1d;
-    # Shared cache keeps TLS session reuse consistent across OPAC and staff listeners.
+    # Shared cache lets Nginx worker processes reuse TLS sessions from the same named cache.
     ssl_session_cache shared:chengetai_koha_ssl:10m;
     ssl_protocols TLSv1.2 TLSv1.3;
 

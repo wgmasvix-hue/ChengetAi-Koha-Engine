@@ -184,9 +184,8 @@ plugin_restore() {
 
     local backup="${1:-}"
     if [ -z "$backup" ]; then
-        local backups=("$DEPLOY_DIR"/backups/chengetai-backup-*)
-        [ -e "${backups[0]}" ] || error "No backups found in $DEPLOY_DIR/backups. Create one with: chengetai backup $DEPLOY_NAME"
-        backup="${backups[${#backups[@]}-1]}"
+        backup=$(find "$DEPLOY_DIR/backups" -maxdepth 1 -mindepth 1 -type d -name "chengetai-backup-*" -printf "%T@ %p\n" 2>/dev/null | sort -n | tail -1 | cut -d" " -f2-)
+        [ -n "$backup" ] || error "No backups found in $DEPLOY_DIR/backups. Create one with: chengetai backup $DEPLOY_NAME"
         info "No backup specified — using most recent: $backup"
     fi
 

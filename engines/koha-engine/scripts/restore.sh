@@ -40,8 +40,12 @@ info "Stopping application services during restore"
 compose stop nginx koha || true
 
 info "Restoring MariaDB"
-compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb mariadb -u root -e "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`;"
-gunzip -c "$DB_DUMP" | compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb mariadb -u root "$MYSQL_DATABASE"
+prepare_mariadb_client_file "$MYSQL_ROOT_PASSWORD"
+trap cleanup_mariadb_client_file EXIT
+compose exec -T mariadb mariadb --defaults-extra-file=/tmp/chengetai-client.cnf -e "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`;"
+gunzip -c "$DB_DUMP" | compose exec -T mariadb mariadb --defaults-extra-file=/tmp/chengetai-client.cnf "$MYSQL_DATABASE"
+cleanup_mariadb_client_file
+trap - EXIT
 
 info "Restoring Koha files"
 compose run --rm --no-deps -T koha sh <<'EOSH'
@@ -54,7 +58,7 @@ test -w /etc/koha/sites
 test -w /var/lib/koha
 test -w /var/log/koha
 EOSH
-cat "$FILES_ARCHIVE" | compose run --rm --no-deps -T koha tar xzf - -C /
+compose run --rm --no-deps -T koha tar xzf - -C / < "$FILES_ARCHIVE"
 
 info "Restarting full stack"
 compose up -d --remove-orphans
