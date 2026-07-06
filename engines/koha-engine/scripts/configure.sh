@@ -15,7 +15,7 @@ fi
 DEPLOY_NAME="${DEPLOY_NAME:-koha}"
 INSTANCE_SLUG="$(slugify "${REPOSITORY:-$DEPLOY_NAME}")"
 INSTANCE_SLUG="${INSTANCE_SLUG:-koha}"
-ADMIN_USER_DEFAULT="$(printf '%s' "${KOHA_ADMINUSER:-${ADMIN_EMAIL%%@*}}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_')"
+ADMIN_USER_DEFAULT="$(sanitize_admin_user "${KOHA_ADMINUSER:-${ADMIN_EMAIL%%@*}}")"
 ADMIN_USER_DEFAULT="${ADMIN_USER_DEFAULT:-admin}"
 
 UI_PORT="${UI_PORT:-${KOHA_OPAC_PORT:-4000}}"
@@ -25,6 +25,7 @@ TZ="${TZ:-UTC}"
 KOHA_DOMAIN="${KOHA_DOMAIN:-${SERVER_IP:-localhost}}"
 KOHA_INSTANCE="${KOHA_INSTANCE:-$INSTANCE_SLUG}"
 KOHA_ADMINUSER="${KOHA_ADMINUSER:-$ADMIN_USER_DEFAULT}"
+# Password precedence: ADMIN_PASS override > existing KOHA_ADMINPASS > generated random password.
 KOHA_ADMINPASS="${ADMIN_PASS:-${KOHA_ADMINPASS:-$(random_string 24)}}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-$(random_string 32)}"
 MYSQL_DATABASE="${MYSQL_DATABASE:-koha_${INSTANCE_SLUG//-/_}}"

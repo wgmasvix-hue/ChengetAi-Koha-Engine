@@ -25,6 +25,10 @@ tar xzf "$ENGINE_ARCHIVE" -C "$ROOT"
 load_env
 bundle_prerequisites
 
+info "Validating backup archives"
+gzip -t "$DB_DUMP"
+tar tzf "$FILES_ARCHIVE" >/dev/null
+
 info "Starting required services for restore"
 compose up -d mariadb memcached opensearch rabbitmq
 wait_for_service mariadb 40 5
@@ -40,7 +44,16 @@ compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb mariadb -u root -e "
 gunzip -c "$DB_DUMP" | compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb mariadb -u root "$MYSQL_DATABASE"
 
 info "Restoring Koha files"
-compose run --rm --no-deps -T koha sh -lc "rm -rf /etc/koha/sites/* /var/lib/koha/* /var/log/koha/* && mkdir -p /etc/koha/sites /var/lib/koha /var/log/koha && test -w /etc/koha/sites && test -w /var/lib/koha && test -w /var/log/koha"
+compose run --rm --no-deps -T koha sh <<'EOSH'
+set -e
+rm -rf /etc/koha/sites/*
+rm -rf /var/lib/koha/*
+rm -rf /var/log/koha/*
+mkdir -p /etc/koha/sites /var/lib/koha /var/log/koha
+test -w /etc/koha/sites
+test -w /var/lib/koha
+test -w /var/log/koha
+EOSH
 cat "$FILES_ARCHIVE" | compose run --rm --no-deps -T koha tar xzf - -C /
 
 info "Restarting full stack"

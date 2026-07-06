@@ -52,6 +52,10 @@ slugify() {
     echo "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//'
 }
 
+sanitize_admin_user() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_'
+}
+
 random_string() {
     local size="${1:-24}"
     od -An -N64 -tx1 /dev/urandom | tr -d ' \n' | cut -c1-"$size"
@@ -194,6 +198,15 @@ check_url() {
     return 1
 }
 
+is_valid_ip() {
+    command -v python3 >/dev/null 2>&1 || return 1
+    python3 - "$1" <<'PYTHON' >/dev/null 2>&1
+import ipaddress
+import sys
+ipaddress.ip_address(sys.argv[1])
+PYTHON
+}
+
 generate_tls_assets() {
     local cert_target key_target san
 
@@ -211,15 +224,15 @@ generate_tls_assets() {
     require_command openssl
 
     san="DNS:localhost,IP:127.0.0.1"
-    if python3 - "$KOHA_DOMAIN" <<'PYTHON' >/dev/null 2>&1
-import ipaddress
-import sys
-ipaddress.ip_address(sys.argv[1])
-PYTHON
-    then
+    if is_valid_ip "$KOHA_DOMAIN"; then
         san="$san,IP:${KOHA_DOMAIN}"
-    elif [ "${KOHA_DOMAIN}" != "localhost" ]; then
-        san="$san,DNS:${KOHA_DOMAIN}"
+    else
+        if [[ "$KOHA_DOMAIN" =~ ^[0-9]+(\.[0-9]+){3}$ ]] && ! command -v python3 >/dev/null 2>&1; then
+            warn "python3 unavailable; treating numeric KOHA_DOMAIN as a DNS SAN" "host=${KOHA_DOMAIN}"
+        fi
+        if [ "$KOHA_DOMAIN" != "localhost" ]; then
+            san="$san,DNS:${KOHA_DOMAIN}"
+        fi
     fi
 
     openssl req -x509 -nodes -newkey rsa:2048 \

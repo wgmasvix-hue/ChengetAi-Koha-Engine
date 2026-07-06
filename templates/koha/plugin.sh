@@ -6,6 +6,9 @@ PLUGIN_NAME="koha"
 PLUGIN_DESCRIPTION="Koha library management system"
 PLUGIN_STATUS="available"
 
+# shellcheck source=/dev/null
+source "$CHENGETAI_HOME/engines/koha-engine/scripts/common.sh"
+
 engine_source_dir() {
     echo "$CHENGETAI_HOME/engines/koha-engine"
 }
@@ -19,6 +22,7 @@ ui_port() {
 }
 
 staff_port() {
+    # The main CLI profile still uses REST_PORT; Koha maps that legacy field to the staff HTTPS port.
     echo "${STAFF_PORT:-${REST_PORT:-8080}}"
 }
 
@@ -59,7 +63,7 @@ load_engine_env() {
 koha_admin_user_default() {
     local candidate
     candidate="${KOHA_ADMINUSER:-${ADMIN_EMAIL%%@*}}"
-    candidate=$(echo "$candidate" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_')
+    candidate="$(sanitize_admin_user "$candidate")"
     echo "${candidate:-admin}"
 }
 
@@ -71,8 +75,8 @@ plugin_server_host() {
 plugin_urls() {
     local host
     host=$(plugin_server_host)
-    echo "  OPAC           : https://${host}:$(ui_port)"
-    echo "  Staff interface: https://${host}:$(staff_port)"
+    echo "  OPAC            : https://${host}:$(ui_port)"
+    echo "  Staff interface : https://${host}:$(staff_port)"
 }
 
 configure_engine() {
