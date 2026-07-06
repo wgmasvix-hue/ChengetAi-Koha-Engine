@@ -48,9 +48,10 @@ A platform is a directory under `templates/<name>/`:
 - `plugin.sh` — bash functions the CLI dispatches to:
   `plugin_deploy/start/stop/restart/status/logs/backup/restore/update/remove/edit`.
 
-`dspace` is fully implemented as an orchestrator of the reference
-repository. `koha`, `moodle`, `ojs`, `nextcloud`, `wordpress` and
-`roserag` are registered as planned platforms.
+`dspace` is implemented as an orchestrator of its canonical repository.
+`koha` is implemented as a bundled engine under `engines/koha-engine/`.
+`moodle`, `ojs`, `nextcloud`, `wordpress` and `roserag` remain planned
+platforms.
 
 ## Deployment lifecycle (dspace)
 

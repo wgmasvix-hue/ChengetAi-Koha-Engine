@@ -70,7 +70,7 @@ server remains constrained by the reference stack's fixed container names
 - ✅ Plugin contract exists and is uniform (bash functions).
 - ⚠️ No machine-readable metadata (fixed: `plugin.json` per platform, and
   an API endpoint that lists them).
-- ⚠️ koha/moodle/ojs are stubs (correct for now; roadmap).
+- ⚠️ moodle/ojs remain stubs; koha now ships as a bundled engine.
 
 ### Security (cross-cutting)
 - ❌ Reference repo carried a **committed database password** in `.env`

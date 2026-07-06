@@ -1,39 +1,66 @@
-version: "3.9"
-
 services:
   mariadb:
     image: mariadb:11
-    container_name: koha-db
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: ${TZ}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     volumes:
-      - koha_db:/var/lib/mysql
-    ports:
-      - "3306:3306"
+      - mariadb:/var/lib/mysql
 
   memcached:
-    image: memcached:latest
-    container_name: koha-memcached
+    image: memcached:1.6-alpine
     restart: unless-stopped
-    ports:
-      - "11211:11211"
-  opensearch:
-    image: opensearchproject/opensearch:2
-    container_name: koha-opensearch
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
     restart: unless-stopped
     environment:
       discovery.type: single-node
-      OPENSEARCH_INITIAL_ADMIN_PASSWORD: "ChengetAi@2026"
-      plugins.security.disabled: "true"
-      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      xpack.security.enabled: "false"
+    volumes:
+      - elasticsearch:/usr/share/elasticsearch/data
+
+  koha:
+    image: digibib/koha:latest
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+    environment:
+      KOHA_INSTANCE: ${KOHA_INSTANCE}
+      KOHA_DOMAIN: ${KOHA_DOMAIN}
+      KOHA_ADMINUSER: ${KOHA_ADMINUSER}
+      KOHA_ADMINPASS: ${KOHA_ADMINPASS}
+      KOHA_INTRANET_PORT: ${REST_PORT}
+      KOHA_OPAC_PORT: ${UI_PORT}
+      KOHA_DB_HOST: mariadb
+      KOHA_DB_PORT: 3306
+      KOHA_DB_USER: ${MYSQL_USER}
+      KOHA_DB_PASS: ${MYSQL_PASSWORD}
+      KOHA_DB_NAME: ${MYSQL_DATABASE}
     ports:
-      - "9200:9200"
-      - "9600:9600"
+      - "${UI_PORT}:${UI_PORT}"
+      - "${REST_PORT}:${REST_PORT}"
+      - "6001:6001"
+    volumes:
+      - koha_data:/var/lib/koha
 
 volumes:
-  koha_db:
+  mariadb:
+  elasticsearch:
+  koha_data:

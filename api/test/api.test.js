@@ -96,12 +96,15 @@ test('dashboard returns real system stats', async () => {
   assert.ok(json.uptime.length > 0);
 });
 
-test('plugins catalogue lists dspace as available', async () => {
+test('plugins catalogue lists dspace and koha as available', async () => {
   const { status, json } = await api('GET', '/api/plugins');
   assert.equal(status, 200);
   const dspace = json.find((p) => p.name === 'dspace');
+  const koha = json.find((p) => p.name === 'koha');
   assert.ok(dspace);
+  assert.ok(koha);
   assert.equal(dspace.status, 'available');
+  assert.equal(koha.status, 'available');
 });
 
 test('server CRUD with validation and audit', async () => {
