@@ -7,7 +7,12 @@ source "$ROOT/scripts/common.sh"
 
 require_docker
 load_env
+bundle_prerequisites
 
-info "Stopping Koha stack"
-compose down --remove-orphans
-info "Koha stack stopped"
+info "Pulling updated images"
+compose pull
+
+info "Applying update"
+compose up -d --remove-orphans
+bash "$ROOT/scripts/healthcheck.sh" --wait
+print_access_details

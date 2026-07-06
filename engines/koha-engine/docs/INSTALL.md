@@ -1,21 +1,17 @@
 # Koha Engine Installation
 
-The Koha platform is deployed through the main `chengetai` CLI:
+Deploy through the main CLI:
 
 ```bash
-chengetai create koha <name>
-chengetai deploy <name>
+chengetai deploy koha
 ```
 
-During deployment the plugin copies the bundled engine into `deployments/<name>/engine/`, generates a deployment-specific `.env`, pulls the required container images, and starts the stack with Docker Compose.
+The plugin copies this bundled engine into `deployments/<name>/engine/`, generates a deployment-specific `.env`, creates TLS assets when needed, starts the Docker Compose stack, waits for health checks, and prints the Koha onboarding credentials plus the OPAC and staff URLs.
 
-Ports:
-- `UI_PORT` → Koha OPAC
-- `STAFF_PORT` → Koha staff interface (`REST_PORT` is still accepted for compatibility with the main CLI profile format)
-
-The engine can also be operated directly for local iteration:
+For direct local iteration:
 
 ```bash
 cd engines/koha-engine
-bin/chengetai-koha help
+cp .env.example .env
+bin/chengetai-koha install
 ```

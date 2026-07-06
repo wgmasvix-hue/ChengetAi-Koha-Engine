@@ -10,22 +10,22 @@ ChengetAi Koha Engine
 Usage:
   chengetai-koha configure
   chengetai-koha install
+  chengetai-koha create-instance
   chengetai-koha start
   chengetai-koha stop
   chengetai-koha backup <dir>
   chengetai-koha restore <dir>
-  chengetai-koha healthcheck
+  chengetai-koha update
+  chengetai-koha uninstall [--purge]
+  chengetai-koha healthcheck [--wait]
 HELP
 }
 
 cmd="${1:-}"
-[ $# -gt 0 ] && shift || true
+[ "$#" -gt 0 ] && shift || true
 
 case "$cmd" in
-    configure|install|start|stop|healthcheck)
-        exec bash "$ROOT/scripts/$cmd.sh" "$@"
-        ;;
-    backup|restore)
+    configure|install|create-instance|start|stop|backup|restore|update|uninstall|healthcheck)
         exec bash "$ROOT/scripts/$cmd.sh" "$@"
         ;;
     help|"")

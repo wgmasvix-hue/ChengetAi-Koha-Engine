@@ -1,0 +1,26 @@
+name: koha-engine
+version: 1.0.0
+engineVersion: koha-24.05
+platform: koha
+runtime: docker-compose
+entrypoint: bin/chengetai-koha
+supports:
+  - deploy
+  - start
+  - stop
+  - backup
+  - restore
+  - update
+  - uninstall
+  - healthcheck
+services:
+  - nginx
+  - koha
+  - mariadb
+  - memcached
+  - opensearch
+  - rabbitmq
+artifacts:
+  envExample: .env.example
+  composeFile: docker-compose.yml
+  docs: README.md

@@ -2,16 +2,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+# shellcheck source=/dev/null
+source "$ROOT/scripts/common.sh"
 
-[ -f .env ] || {
-    echo "Missing $ROOT/.env. Run configure first." >&2
-    exit 1
-}
+require_docker
+load_env
+bundle_prerequisites
 
-echo "====================================="
-echo " Starting ChengetAi Koha Engine"
-echo "====================================="
-
-docker compose up -d
+info "Starting Koha stack"
+compose up -d
 bash "$ROOT/scripts/healthcheck.sh" --wait
+print_access_details

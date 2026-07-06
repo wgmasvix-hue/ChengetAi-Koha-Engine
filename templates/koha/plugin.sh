@@ -71,16 +71,13 @@ plugin_server_host() {
 plugin_urls() {
     local host
     host=$(plugin_server_host)
-    echo "  OPAC           : http://${host}:$(ui_port)"
-    echo "  Staff interface: http://${host}:$(staff_port)"
+    echo "  OPAC           : https://${host}:$(ui_port)"
+    echo "  Staff interface: https://${host}:$(staff_port)"
 }
 
 configure_engine() {
     sync_engine
 
-    if [ ! -f "$(engine_dir)/.env" ] && [ -z "${ADMIN_PASS:-}" ]; then
-        prompt_if_empty ADMIN_PASS "Koha Administrator Password"
-    fi
 
     KOHA_ADMINUSER="$(koha_admin_user_default)" \
     DEPLOY_NAME="$DEPLOY_NAME" \
@@ -189,7 +186,8 @@ plugin_restore() {
     fi
 
     [ -f "$backup/koha-db.sql.gz" ] || error "Database dump not found: $backup/koha-db.sql.gz"
-    [ -f "$backup/koha-data.tar.gz" ] || error "Koha data archive not found: $backup/koha-data.tar.gz"
+    [ -f "$backup/koha-files.tar.gz" ] || error "Koha files archive not found: $backup/koha-files.tar.gz"
+    [ -f "$backup/engine-config.tar.gz" ] || error "Engine config archive not found: $backup/engine-config.tar.gz"
 
     echo "This will REPLACE the current Koha database and data with the contents of:"
     echo ""
@@ -216,11 +214,7 @@ plugin_update() {
     info "Refreshing bundled Koha engine files..."
     configure_engine
 
-    info "Pulling latest container images..."
-    pcompose pull
-
-    info "Applying update..."
-    pcompose up -d --remove-orphans
+    bash "$(engine_dir)/scripts/update.sh"
 }
 
 plugin_edit() {
@@ -238,7 +232,8 @@ plugin_edit() {
             echo ""
             if confirm "Restart Koha now so the change goes live?"; then
                 require_docker
-                pcompose up -d --remove-orphans
+                bash "$(engine_dir)/scripts/configure.sh"
+                bash "$(engine_dir)/scripts/start.sh"
                 echo ""
                 info "Koha restarted with the updated configuration."
             else
@@ -255,9 +250,9 @@ plugin_remove() {
     local purge="${1:-0}"
     if [ -f "$(engine_dir)/docker-compose.yml" ] && [ -f "$(engine_dir)/.env" ]; then
         if [ "$purge" = "1" ]; then
-            pcompose down --remove-orphans --volumes
+            bash "$(engine_dir)/scripts/uninstall.sh" --purge
         else
-            pcompose down --remove-orphans
+            bash "$(engine_dir)/scripts/uninstall.sh"
         fi
     fi
 }

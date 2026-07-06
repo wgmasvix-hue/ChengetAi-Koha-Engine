@@ -2,41 +2,48 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+# shellcheck source=/dev/null
+source "$ROOT/scripts/common.sh"
 
 BACKUP_DIR="${1:-}"
-[ -n "$BACKUP_DIR" ] || {
-    echo "Usage: restore.sh <backup-directory>" >&2
-    exit 1
-}
+[ -n "$BACKUP_DIR" ] || die "Usage: restore.sh <backup-directory>"
 
 DB_DUMP="$BACKUP_DIR/koha-db.sql.gz"
-DATA_ARCHIVE="$BACKUP_DIR/koha-data.tar.gz"
-[ -f "$DB_DUMP" ] || {
-    echo "Database dump not found: $DB_DUMP" >&2
-    exit 1
-}
-[ -f "$DATA_ARCHIVE" ] || {
-    echo "Koha data archive not found: $DATA_ARCHIVE" >&2
-    exit 1
-}
+FILES_ARCHIVE="$BACKUP_DIR/koha-files.tar.gz"
+ENGINE_ARCHIVE="$BACKUP_DIR/engine-config.tar.gz"
 
-[ -f .env ] || {
-    echo "Missing $ROOT/.env. Run configure first." >&2
-    exit 1
-}
+[ -f "$DB_DUMP" ] || die "Database dump not found: $DB_DUMP"
+[ -f "$FILES_ARCHIVE" ] || die "Koha files archive not found: $FILES_ARCHIVE"
+[ -f "$ENGINE_ARCHIVE" ] || die "Engine config archive not found: $ENGINE_ARCHIVE"
 
-set -a
-# shellcheck source=/dev/null
-source .env
-set +a
+require_docker
+if [ -f "$ENV_FILE" ]; then
+    load_env
+fi
 
-docker compose stop koha || true
-docker compose up -d mariadb memcached elasticsearch
-docker compose exec -T mariadb mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`;"
-gunzip -c "$DB_DUMP" | docker compose exec -T mariadb mariadb -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"
-docker compose run --rm --no-deps koha sh -lc 'rm -rf /var/lib/koha/* && tar xzf - -C /var/lib' < "$DATA_ARCHIVE"
-docker compose up -d koha
+tar xzf "$ENGINE_ARCHIVE" -C "$ROOT"
+load_env
+bundle_prerequisites
+
+info "Starting required services for restore"
+compose up -d mariadb memcached opensearch rabbitmq
+wait_for_service mariadb 40 5
+wait_for_service memcached 20 3
+wait_for_service opensearch 60 5
+wait_for_service rabbitmq 40 5
+
+info "Stopping application services during restore"
+compose stop nginx koha || true
+
+info "Restoring MariaDB"
+compose exec -T mariadb mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`;"
+gunzip -c "$DB_DUMP" | compose exec -T mariadb mariadb -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"
+
+info "Restoring Koha files"
+compose run --rm --no-deps -T koha sh -lc "rm -rf /etc/koha/sites/* /var/lib/koha/* /var/log/koha/*"
+cat "$FILES_ARCHIVE" | compose run --rm --no-deps -T koha tar xzf - -C /
+
+info "Restarting full stack"
+compose up -d --remove-orphans
 bash "$ROOT/scripts/healthcheck.sh" --wait
-
-echo "Koha restore completed from $BACKUP_DIR"
+print_access_details

@@ -2,51 +2,42 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+# shellcheck source=/dev/null
+source "$ROOT/scripts/common.sh"
 
 WAIT=0
 if [ "${1:-}" = "--wait" ]; then
     WAIT=1
 fi
 
-[ -f .env ] || {
-    echo "Missing $ROOT/.env. Run configure first." >&2
-    exit 1
-}
+require_command curl
+require_docker
+load_env
 
-set -a
-# shellcheck source=/dev/null
-source .env
-set +a
-
-check_url() {
-    local label="$1" url="$2"
-    if curl -fsS "$url" >/dev/null 2>&1; then
-        echo "✓ $label : $url"
-        return 0
-    fi
-    echo "✗ $label : not responding ($url)"
-    return 1
-}
-
-wait_for_url() {
-    local label="$1" url="$2" attempts=30
-    local i
-    for i in $(seq 1 "$attempts"); do
-        if curl -fsS "$url" >/dev/null 2>&1; then
-            echo "✓ $label : $url"
-            return 0
+services=(mariadb memcached opensearch rabbitmq koha nginx)
+failed=0
+for service in "${services[@]}"; do
+    if [ "$WAIT" -eq 1 ]; then
+        wait_for_service "$service" 80 3
+    else
+        status="$(service_health_status "$service" || true)"
+        if [ -z "$status" ]; then
+            warn "Service not found" "service=$service"
+            failed=1
+        elif [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+            info "Service healthy" "service=$service" "status=$status"
+        else
+            warn "Service unhealthy" "service=$service" "status=$status"
+            failed=1
         fi
-        sleep 5
-    done
-    echo "✗ $label : not responding ($url)"
-    return 1
-}
+    fi
+done
 
-if [ "$WAIT" = "1" ]; then
-    wait_for_url "OPAC" "http://localhost:${UI_PORT}"
-    wait_for_url "Staff interface" "http://localhost:${STAFF_PORT:-$REST_PORT}"
+if [ "$WAIT" -eq 1 ]; then
+    wait_for_url "OPAC" "$(opac_url)" 40 3
+    wait_for_url "Staff" "$(staff_url)" 40 3
 else
-    check_url "OPAC" "http://localhost:${UI_PORT}"
-    check_url "Staff interface" "http://localhost:${STAFF_PORT:-$REST_PORT}"
+    check_url "OPAC" "$(opac_url)" || failed=1
+    check_url "Staff" "$(staff_url)" || failed=1
+    [ "$failed" -eq 0 ] || exit 1
 fi
