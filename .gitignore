@@ -13,6 +13,7 @@ logs/
 # Environment
 .env
 .env.*
+!engines/koha-engine/.env.example
 
 # PM2
 .pm2/
