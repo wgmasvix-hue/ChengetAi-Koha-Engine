@@ -211,7 +211,12 @@ generate_tls_assets() {
     require_command openssl
 
     san="DNS:localhost,IP:127.0.0.1"
-    if [[ "${KOHA_DOMAIN}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    if python3 - "$KOHA_DOMAIN" <<'PYTHON' >/dev/null 2>&1
+import ipaddress
+import sys
+ipaddress.ip_address(sys.argv[1])
+PYTHON
+    then
         san="$san,IP:${KOHA_DOMAIN}"
     elif [ "${KOHA_DOMAIN}" != "localhost" ]; then
         san="$san,DNS:${KOHA_DOMAIN}"

@@ -36,11 +36,11 @@ info "Stopping application services during restore"
 compose stop nginx koha || true
 
 info "Restoring MariaDB"
-compose exec -T mariadb mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`;"
-gunzip -c "$DB_DUMP" | compose exec -T mariadb mariadb -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"
+compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb mariadb -u root -e "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`;"
+gunzip -c "$DB_DUMP" | compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb mariadb -u root "$MYSQL_DATABASE"
 
 info "Restoring Koha files"
-compose run --rm --no-deps -T koha sh -lc "rm -rf /etc/koha/sites/* /var/lib/koha/* /var/log/koha/*"
+compose run --rm --no-deps -T koha sh -lc "rm -rf /etc/koha/sites/* /var/lib/koha/* /var/log/koha/* && mkdir -p /etc/koha/sites /var/lib/koha /var/log/koha && test -w /etc/koha/sites && test -w /var/lib/koha && test -w /var/log/koha"
 cat "$FILES_ARCHIVE" | compose run --rm --no-deps -T koha tar xzf - -C /
 
 info "Restarting full stack"

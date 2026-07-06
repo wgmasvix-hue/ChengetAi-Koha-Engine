@@ -59,7 +59,7 @@ load_engine_env() {
 koha_admin_user_default() {
     local candidate
     candidate="${KOHA_ADMINUSER:-${ADMIN_EMAIL%%@*}}"
-    candidate=$(echo "$candidate" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-')
+    candidate=$(echo "$candidate" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_')
     echo "${candidate:-admin}"
 }
 
@@ -180,8 +180,9 @@ plugin_restore() {
 
     local backup="${1:-}"
     if [ -z "$backup" ]; then
-        backup=$(ls -1d "$DEPLOY_DIR"/backups/chengetai-backup-* 2>/dev/null | sort | tail -1)
-        [ -n "$backup" ] || error "No backups found in $DEPLOY_DIR/backups. Create one with: chengetai backup $DEPLOY_NAME"
+        local backups=("$DEPLOY_DIR"/backups/chengetai-backup-*)
+        [ -e "${backups[0]}" ] || error "No backups found in $DEPLOY_DIR/backups. Create one with: chengetai backup $DEPLOY_NAME"
+        backup="${backups[${#backups[@]}-1]}"
         info "No backup specified — using most recent: $backup"
     fi
 
